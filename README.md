@@ -9,7 +9,7 @@ This project uses ideas and code snipets from: https://github.com/gandrewstone/L
 
 The Hardware configuration is as follows:
 
-LINBUS Breakout - skpang.co.uk
+**LINBUS Breakout - skpang.co.uk**
 
 |PIN LIN    |   PIN Arduino Nano |
 |-----------|--------------------|
@@ -21,18 +21,18 @@ LINBUS Breakout - skpang.co.uk
 | VCC       |  Vcc *+5V* |
 
 ********************************************************************
-Connector 2 on LIN Breakout:
+**Connector 2 on LIN Breakout:**
 
-UBat --> + Akku
-LIN  --> IBS PIN 2
-GND  --> GNC Connector Sensor not Akku !!
+- UBat --> + Akku
+- LIN  --> IBS PIN 2
+- GND  --> GNC Connector Sensor not Akku !!
 ********************************************************************
-Hella IBS 200X Sensor
+**Hella IBS 200X Sensor**
 
-PIN1: --> + Akku
-PIN2: --> LIN Bus
+- PIN1: --> + Akku
+- PIN2: --> LIN Bus
 ******************************************************************** 
-ST7735S Display:
+**ST7735S Display:**
 
 |PIN Display  |  PIN Arduin Nano|
 |---|----|
