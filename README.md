@@ -20,18 +20,19 @@ The Hardware configuration is as follows:
 | RxD       |  4                 |
 | VCC       |  Vcc *+5V* |
 
-********************************************************************
 **Connector 2 on LIN Breakout:**
 
 - UBat --> + Akku
 - LIN  --> IBS PIN 2
 - GND  --> GNC Connector Sensor not Akku !!
-********************************************************************
+
+
 **Hella IBS 200X Sensor**
 
 - PIN1: --> + Akku
 - PIN2: --> LIN Bus
-******************************************************************** 
+
+
 **ST7735S Display:**
 
 |PIN Display  |  PIN Arduin Nano|
