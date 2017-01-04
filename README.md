@@ -7,19 +7,18 @@ The project uses a LIN breakout board from skpan electronics: http://skpang.co.u
 
 This project uses ideas and code snipets from: https://github.com/gandrewstone/LIN
 
-The Hardware configuration is as follows.
+The Hardware configuration is as follows:
 
-*******************************************************************
 LINBUS Breakout - skpang.co.uk
 
-PIN LIN     |   PIN Arduino Nano
-----------------------------------
-GND         |  GND
-CS          |  2
-FAULT       |  VCC +5V
-TxD         |  3
-RxD         |  4
-VCC         |  Vcc +5V
+|PIN LIN    |   PIN Arduino Nano |
+|-----------|--------------------|
+| GND       |  GND |  
+| CS        |  2                 |
+| FAULT     |  VCC *+5V*  |
+| TxD       |  3                 |
+| RxD       |  4                 |
+| VCC       |  Vcc *+5V* |
 
 ********************************************************************
 Connector 2 on LIN Breakout:
@@ -35,13 +34,13 @@ PIN2: --> LIN Bus
 ******************************************************************** 
 ST7735S Display:
 
-PIN Display  |  PIN Arduin Nano
---------------------------------------
-LED          |  VCC +5V
-SCK          |  13
-SDA          |  11
-A0 (DC)      |  9
-Reset RST    |  8
-CS           |  10
+|PIN Display  |  PIN Arduin Nano|
+|---|----|
+|LED          |  VCC +5V |
+|SCK          |  13 |
+|SDA          |  11 |
+|A0 *(DC)*      |  9 |
+|Reset RST    |  8 |
+|CS           |  10 |
 GND          |  GND
 VCC          |  VCC +5V
