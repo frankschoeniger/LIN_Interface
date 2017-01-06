@@ -1,0 +1,2 @@
+1. There is currently no error handling from LIN Bus implemented.
+2. There are errors reported if the software will be compiled on Arduino IDE Versions > 1.6.5 This issue is currently under investigation.
