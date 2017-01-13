@@ -75,7 +75,7 @@ SoftwareSerial linSerial(rxPin1, txPin1); // RX, TX
 int xakk = 5;
 int yakk = 20;
 int xtex = 55;
-int ytex = 20;
+int ytex = 5;
 int xamp = 110;
 int yamp = 13;
 
@@ -84,18 +84,15 @@ int yamp = 13;
 
 boolean outputSerial = true;    // true if json output to serial, false if only display
 boolean outputLCD = true;       // if true LCD output
-boolean simulate = false;         // fake values - no real LIN access
+boolean debug = true;           // Debug output UART
 
 // Global Variables
 
 byte LinMessage[9] = {0};
-byte LinMessageA[9] = {0};
+byte LinMessageA[200] = {0};
 boolean linSerialOn = 0;
 
 void setup() {
-
-  Serial.begin(9600);
-  Serial.println("********** LIN Bus Test ***********");
 
   pinMode(linCSPin, OUTPUT);               // CS Signal LIN Tranceiver
   digitalWrite(linCSPin, HIGH);
@@ -123,61 +120,50 @@ void loop() {
 
   LinMessageA[0] = 0x01;
   while (bitRead(LinMessageA[0], 0) > 0) {
-    sendID(0x27);
-    read_answer();
+    readFrame(0x27);
   }
 
   // Read Frame IBS_FRM 2 - Current Values
 
-  sendID(0x28);
-  read_answer();
+  readFrame(0x28);
 
   Ubatt = (float((LinMessageA[4] << 8) + LinMessageA[3])) / 1000;
   Ibatt = (float((long(LinMessageA[2]) << 16) + (long(LinMessageA[1]) << 8) + long(LinMessageA[0]) - 2000000L)) / 1000;
   Btemp = long(LinMessageA[5]) / 2 - 40;
 
+
   // Read Frame IBS_FRM 3 - Error Values
 
-  sendID(0x29);
-  read_answer();
+  readFrame(0x29);
 
 
   // Read Frame IBS_FRM 5
 
-  sendID(0x2B);
-  delay(1000);
-  read_answer();
+  readFrame(0x2B);
+
 
   soc = int(LinMessageA[0]) / 2;
   soh = int(LinMessageA[1]) / 2;
 
   // Read Frame IBS_FRM 6
 
-  sendID(0x2C);
-  read_answer();
+  readFrame(0x2C);
 
   AvCap = (float((LinMessageA[3] << 8) + LinMessageA[2])) / 10;       //Dischargeable Capacity
   int Calib = bitRead(LinMessageA[5], 0);
 
-  Serial.println(Calib);
+  // Read Frame 4
 
-  // Read Frame IBS_Start Detection
+  readFrame(0x2A);
 
-  sendID(0x35);
-  read_answer();
 
-  remTime = ((LinMessageA[1] << 8) + LinMessageA[0]) / 60;               // not sure if this is really the remaining time in minutes?
-
-// Read Frame IBS_State of Charge
-
-  sendID(0x37);
-  delay(100);
-  read_answer();
-
+  //soc = (AvCap/(80*soh/100))*100;         // Anzeige der eigentlichen Restkapazität im Battsymbol
 
   // Output json String to serial
 
   if (outputSerial) {
+    Serial.begin(9600);
+    delay(50);
     Serial.print("{\"current\":{\"ubat\":\"");
     Serial.print(Ubatt, 2);
     Serial.print("\",\"icurr\":\"");
@@ -193,56 +179,62 @@ void loop() {
     Serial.print("\",\"temp\":\"");
     Serial.print(Btemp);
     Serial.println("\"}}");
+    Serial.end();
   }
 
   // Output LCD Display
 
   if (outputLCD) {
 
-    drawAkku(soc, remTime);
+    drawAkku(soc, remTime, Calib);
     drawAmp(Ibatt);
-    drawTxt(Ubatt, soh, AvCap, Calib);
+    drawTxt(Ubatt, soh, AvCap, Btemp);
 
   }
 
 
-  delay(200);
+  delay(2000);
 
 }
 
 
-
 // Read answer from Lin bus
-void read_answer() {
+void readFrame(byte mID) {
 
-  LinMessageA[0] = 0x00;
-  LinMessageA[1] = 0x00;
-  LinMessageA[2] = 0x00;
-  LinMessageA[3] = 0x00;
-  LinMessageA[4] = 0x00;
-  LinMessageA[5] = 0x00;
-  LinMessageA[6] = 0x00;
-  LinMessageA[7] = 0x00;
-  LinMessageA[8] = 0x00;
-  LinMessageA[9] = 0x00;
-  delay(100);
-  //while (linSerial.available() == 0){}           // wait till answer from serial
-
+  memset(LinMessageA, 0, sizeof(LinMessageA));
   int ix = 0;
-  if (linSerial.available() > 0) {              // read serial
-    //Serial.print("gelesen: ");
-    while (linSerial.available() > 0) {
+  byte linID = mID & 0x3F | addIDParity(mID);
+
+  serialBreak();
+  linSerial.flush();
+  linSerial.write(0x55); // Sync
+  linSerial.write(linID); // ID
+  linSerial.flush();
+  delay(800);
+  if (linSerial.available()) {              // read serial
+    while (linSerial.available()) {
       LinMessageA[ix] = linSerial.read();
       ix++;
       if (ix > 9) {
         break;
       }
     }
+  }
+
+  if (debug) {
+    Serial.begin(9600);
+    delay(50);
+    Serial.print("ID: ");
+    Serial.print(linID, HEX);
+    Serial.print(" --> ");
+    Serial.print(mID, HEX);
+    Serial.print(": ");
     for (int ixx = 0; ixx < 9; ixx++) {
       Serial.print(LinMessageA[ixx], HEX);
       Serial.print(":");
     }
     Serial.println("  Lesen Ende");
+    Serial.end();
   }
 
 }
@@ -272,18 +264,7 @@ void sendMessage(byte mID, int nByte) {
   linSerial.flush();
 }
 
-void sendID(byte mID) {
 
-  byte linID = mID & 0x3F | addIDParity(mID);
-  serialBreak();
-  linSerial.write(0x55); // Sync
-  linSerial.write(linID); // ID
-  linSerial.flush();
-  Serial.print("ID gesendet: ");
-  Serial.print(linID, HEX);
-  Serial.print(" --> ");
-  Serial.println(mID, HEX);
-}
 
 byte LINChecksum(int nByte) {
 
@@ -296,7 +277,7 @@ byte LINChecksum(int nByte) {
 
 byte addIDParity(byte linID) {
   byte p0 = bitRead(linID, 0)^bitRead(linID, 1)^bitRead(linID, 2)^bitRead(linID, 4);
-  byte p1 = ~bitRead(linID, 1)^bitRead(linID, 3)^bitRead(linID, 4)^bitRead(linID, 5);
+  byte p1 = ~(bitRead(linID, 1)^bitRead(linID, 3)^bitRead(linID, 4)^bitRead(linID, 5));   // evtl. Klammer rum ???
   return ((p0 | (p1 << 1)) << 6);
 }
 
@@ -337,41 +318,43 @@ void init_screen() {
   x = xtex;
   y = ytex;
 
-  tft.fillRect(x, y, 44, 26, ST7735_WHITE);
-  tft.fillRect(x, y + 30, 44, 26, ST7735_WHITE);
-  tft.fillRect(x, y + 60, 44, 26, ST7735_WHITE);
+  tft.fillRect(x, y, 44, 24, ST7735_WHITE);
+  tft.fillRect(x, y + 28, 44, 24, ST7735_WHITE);
+  tft.fillRect(x, y + 56, 44, 24, ST7735_WHITE);
+  tft.fillRect(x, y + 84, 44, 24, ST7735_WHITE);
   tft.setTextColor(ST7735_BLACK, ST7735_WHITE);
-  tft.setCursor(x + 9, y + 3);
+  tft.setCursor(x + 9, y + 2);
   tft.print("UBat:");
-  tft.setCursor(x + 12, y + 33);
+  tft.setCursor(x + 12, y + 30);
   tft.print("SOH:");
-  tft.setCursor(x + 2, y + 63);
+  tft.setCursor(x + 4, y + 58);
   tft.print("Capac.");
+  tft.setCursor(x + 7, y + 86);
+  tft.print("Temp.");
 }
 
-void drawTxt(float u, int soh, float cap, int calib) {
+void drawTxt(float u, int soh, float cap, float temp) {
+
   int x = xtex;
   int y = ytex;
 
   tft.setTextColor(ST7735_BLACK, ST7735_WHITE);
-  tft.setCursor(x + 3, y + 15);
+  tft.setCursor(x + 3, y + 13);
   tft.print(u, 2);
   tft.print("V");
 
-  tft.setCursor(x + 12, y + 75);
-  tft.print(cap, 1);
+  tft.setCursor(x + 12, y + 41);
+  tft.print(soh);
+  tft.print(" %");
 
-  if (calib == 0) {
-    tft.setTextColor(ST7735_RED, ST7735_WHITE);
-    tft.setCursor(x + 12, y + 45);
-    tft.print(soh);
-    tft.print("%");
-  } else {
-    tft.setTextColor(ST7735_BLACK, ST7735_WHITE);
-    tft.setCursor(x + 12, y + 45);
-    tft.print(soh);
-    tft.print("%");
-  }
+  tft.setCursor(x + 4, y + 69);
+  tft.print(cap, 1);
+  tft.print("Ah");
+
+  tft.setCursor(x + 4, y + 97);
+  tft.print(temp, 1);
+  tft.print(" C");
+
 }
 
 void drawAmp(float amp) {
@@ -467,7 +450,7 @@ void drawAmp(float amp) {
 }
 
 
-void drawAkku(int cap, int ti) {
+void drawAkku(int cap, int ti, int calib) {
 
   int x = xakk;
   int y = yakk;
@@ -509,12 +492,24 @@ void drawAkku(int cap, int ti) {
   }
 
   tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-  tft.setCursor (x + 10, y + 92);
-  tft.print(cap);
-  tft.print(" %  ");
-  tft.setCursor(x + 4, 8);
-  tft.print(ti);
-  tft.print(" h    ");
+
+  if (calib == 0) {
+    tft.setTextColor(ST7735_RED, ST7735_BLACK);
+    tft.setCursor(x + 6, y + 92);
+    tft.print(cap, 1);
+    tft.print(" %");
+  } else {
+    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+    tft.setCursor(x + 6, y + 92);
+    tft.print(cap, 1);
+    tft.print(" %");
+  }
+
+  /* expected time - die passt aber noch nicht
+    tft.setCursor(x + 4, 8);
+    tft.print(ti);
+    tft.print(" h    ");
+  */
 }
 
 
