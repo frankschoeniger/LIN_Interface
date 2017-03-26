@@ -245,9 +245,9 @@ void serialBreak() {
   if (linSerialOn == 1) linSerial.end();
   pinMode(txPin1, OUTPUT);
   digitalWrite(txPin1, LOW); // send break
-  delay(1000000 / serSpeed * breakDuration); // duration break time pro bit in micro seconds * number of bit for break
+  delay(1000/ serSpeed * breakDuration); // duration break time pro bit in milli seconds * number of bit for break
   digitalWrite(txPin1, HIGH);
-  delay(1000000 / serSpeed); // wait 1 bit
+  delayMicroseconds(1000000 / serSpeed); // wait 1 bit
   linSerial.begin(serSpeed);
   linSerialOn = 1;
 }
